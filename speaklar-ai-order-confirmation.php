@@ -109,8 +109,6 @@ final class Speaklar_AI_Order_Confirmation
                 .speaklar-aioc-field .description{margin:7px 0 0;color:#646970}
                 .speaklar-aioc-copy{display:flex;gap:8px;align-items:center}
                 .speaklar-aioc-copy input{flex:1}
-                .speaklar-aioc-checks{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:10px}
-                .speaklar-aioc-checks label{display:inline-flex;align-items:center;gap:7px;margin:0}
                 .speaklar-aioc-status-map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
                 .speaklar-aioc-status-map label{margin:0!important}
                 .speaklar-aioc-status-map span{display:block!important;min-width:0!important;margin-bottom:6px;font-weight:650}
@@ -164,12 +162,12 @@ final class Speaklar_AI_Order_Confirmation
                             <div class="speaklar-aioc-grid">
                                 <div class="speaklar-aioc-field">
                                     <label for="speaklar_url"><?php echo esc_html__('Speaklar URL', 'speaklar-ai-order-confirmation'); ?></label>
-                                    <input name="speaklar_url" id="speaklar_url" type="url" required placeholder="https://app.speaklar.com" value="<?php echo esc_attr($settings['speaklar_url']); ?>">
+                                    <input name="speaklar_url" id="speaklar_url" type="url" required maxlength="200" placeholder="https://app.speaklar.com" value="<?php echo esc_attr($settings['speaklar_url']); ?>">
                                     <p class="description"><?php echo esc_html__('Base URL of the Speaklar app or API server.', 'speaklar-ai-order-confirmation'); ?></p>
                                 </div>
                                 <div class="speaklar-aioc-field">
                                     <label for="api_key"><?php echo esc_html__('API Key', 'speaklar-ai-order-confirmation'); ?></label>
-                                    <input name="api_key" id="api_key" type="password" required autocomplete="new-password" value="<?php echo esc_attr($settings['api_key']); ?>">
+                                    <input name="api_key" id="api_key" type="password" required maxlength="200" autocomplete="new-password" value="<?php echo esc_attr($settings['api_key']); ?>">
                                     <p class="description"><?php echo esc_html__('Used to load agents, voices, and request confirmation calls.', 'speaklar-ai-order-confirmation'); ?></p>
                                 </div>
                             </div>
@@ -213,8 +211,23 @@ final class Speaklar_AI_Order_Confirmation
                                     </select>
                                 </div>
                                 <div class="speaklar-aioc-field">
+                                    <label for="company_name"><?php echo esc_html__('Company Name', 'speaklar-ai-order-confirmation'); ?></label>
+                                    <input name="company_name" id="company_name" type="text" maxlength="120" value="<?php echo esc_attr((string) $settings['company_name']); ?>">
+                                </div>
+                                <div class="speaklar-aioc-field">
+                                    <label for="transfer_number"><?php echo esc_html__('Transfer Number', 'speaklar-ai-order-confirmation'); ?></label>
+                                    <input name="transfer_number" id="transfer_number" type="text" maxlength="40" placeholder="01711XXXXXX" value="<?php echo esc_attr((string) $settings['transfer_number']); ?>">
+                                </div>
+                                <div class="speaklar-aioc-field">
                                     <label for="max_duration_minutes"><?php echo esc_html__('Max Duration Minutes', 'speaklar-ai-order-confirmation'); ?></label>
                                     <input name="max_duration_minutes" id="max_duration_minutes" type="number" min="1" max="30" step="1" value="<?php echo esc_attr((int) $settings['max_duration_minutes']); ?>">
+                                </div>
+                                <div class="speaklar-aioc-field">
+                                    <label for="call_type"><?php echo esc_html__('Call Type', 'speaklar-ai-order-confirmation'); ?></label>
+                                    <select name="call_type" id="call_type">
+                                        <option value="ai_call" <?php selected((string) $settings['call_type'], 'ai_call'); ?>><?php echo esc_html__('AI Call', 'speaklar-ai-order-confirmation'); ?></option>
+                                        <option value="ivr_call" <?php selected((string) $settings['call_type'], 'ivr_call'); ?>><?php echo esc_html__('IVR Call', 'speaklar-ai-order-confirmation'); ?></option>
+                                    </select>
                                 </div>
                                 <div class="speaklar-aioc-field">
                                     <label><?php echo esc_html__('Webhook URL', 'speaklar-ai-order-confirmation'); ?></label>
@@ -231,15 +244,9 @@ final class Speaklar_AI_Order_Confirmation
                                 <input type="checkbox" name="trigger_on_new_order" value="1" <?php checked((int) $settings['trigger_on_new_order'], 1); ?>>
                                 <?php echo esc_html__('Request an AI confirmation call when a new order is created.', 'speaklar-ai-order-confirmation'); ?>
                             </label>
-                            <div class="speaklar-aioc-checks">
-                                <?php foreach ($order_statuses as $status_key => $status_label) : ?>
-                                    <?php $clean_status = $this->clean_order_status($status_key); ?>
-                                    <label>
-                                        <input type="checkbox" name="trigger_statuses[]" value="<?php echo esc_attr($clean_status); ?>" <?php checked(in_array($clean_status, (array) $settings['trigger_statuses'], true)); ?>>
-                                        <?php echo esc_html($status_label); ?>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
+                            <?php foreach ((array) $settings['trigger_statuses'] as $trigger_status) : ?>
+                                <input type="hidden" name="trigger_statuses[]" value="<?php echo esc_attr($trigger_status); ?>">
+                            <?php endforeach; ?>
                             <p>
                                 <label>
                                     <input type="checkbox" name="cod_only" value="1" <?php checked((int) $settings['cod_only'], 1); ?>>
@@ -277,10 +284,12 @@ final class Speaklar_AI_Order_Confirmation
                     <h2><?php echo esc_html__('Connection Summary', 'speaklar-ai-order-confirmation'); ?></h2>
                     <ul class="speaklar-aioc-side-list">
                         <li><span><?php echo esc_html__('Agent', 'speaklar-ai-order-confirmation'); ?></span><strong><?php echo esc_html($settings['agent_name'] ?: __('Not selected', 'speaklar-ai-order-confirmation')); ?></strong></li>
+                        <li><span><?php echo esc_html__('Call type', 'speaklar-ai-order-confirmation'); ?></span><strong><?php echo esc_html($settings['call_type'] === 'ivr_call' ? __('IVR Call', 'speaklar-ai-order-confirmation') : __('AI Call', 'speaklar-ai-order-confirmation')); ?></strong></li>
                         <li><span><?php echo esc_html__('Voice', 'speaklar-ai-order-confirmation'); ?></span><strong><?php echo esc_html($settings['text_to_speech_name']); ?></strong></li>
                         <li><span><?php echo esc_html__('Max duration', 'speaklar-ai-order-confirmation'); ?></span><strong><?php echo esc_html((int) $settings['max_duration_minutes']); ?> min</strong></li>
                         <li><span><?php echo esc_html__('Agents refreshed', 'speaklar-ai-order-confirmation'); ?></span><strong><?php echo esc_html($settings['last_agents_fetched_at'] ?: __('Never', 'speaklar-ai-order-confirmation')); ?></strong></li>
                         <li><span><?php echo esc_html__('Voices refreshed', 'speaklar-ai-order-confirmation'); ?></span><strong><?php echo esc_html($settings['last_voices_fetched_at'] ?: __('Never', 'speaklar-ai-order-confirmation')); ?></strong></li>
+                        <li><span><?php echo esc_html__('API Key', 'speaklar-ai-order-confirmation'); ?></span><strong><a href="<?php echo esc_url('https://speaklar.com/'); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html__('Get API Key', 'speaklar-ai-order-confirmation'); ?></a></strong></li>
                     </ul>
                 </aside>
             </div>
@@ -296,19 +305,29 @@ final class Speaklar_AI_Order_Confirmation
         check_admin_referer('speaklar_aioc_save_settings');
 
         $settings = $this->settings();
-        $settings['speaklar_url'] = esc_url_raw((string) wp_unslash($_POST['speaklar_url'] ?? ''));
-        $settings['api_key'] = sanitize_text_field((string) wp_unslash($_POST['api_key'] ?? ''));
-        $settings['agent_list_path'] = sanitize_text_field((string) wp_unslash($_POST['agent_list_path'] ?? $settings['agent_list_path']));
-        $settings['voice_list_path'] = sanitize_text_field((string) wp_unslash($_POST['voice_list_path'] ?? $settings['voice_list_path']));
-        $settings['call_create_path'] = sanitize_text_field((string) wp_unslash($_POST['call_create_path'] ?? $settings['call_create_path']));
+        $settings['speaklar_url'] = esc_url_raw($this->limit_text(wp_unslash($_POST['speaklar_url'] ?? ''), 200));
+        $settings['api_key'] = $this->limit_text(wp_unslash($_POST['api_key'] ?? ''), 200);
+        $settings['agent_list_path'] = $this->limit_text(wp_unslash($_POST['agent_list_path'] ?? $settings['agent_list_path']), 120);
+        $settings['voice_list_path'] = $this->limit_text(wp_unslash($_POST['voice_list_path'] ?? $settings['voice_list_path']), 120);
+        $settings['call_create_path'] = $this->limit_text(wp_unslash($_POST['call_create_path'] ?? $settings['call_create_path']), 120);
         if (isset($_POST['agent_id'])) {
-            $settings['agent_id'] = sanitize_text_field((string) wp_unslash($_POST['agent_id']));
+            $settings['agent_id'] = $this->limit_text(wp_unslash($_POST['agent_id']), 80);
         }
         if (isset($_POST['text_to_speech_name'])) {
-            $settings['text_to_speech_name'] = sanitize_text_field((string) wp_unslash($_POST['text_to_speech_name']));
+            $settings['text_to_speech_name'] = $this->limit_text(wp_unslash($_POST['text_to_speech_name']), 80);
+        }
+        if (isset($_POST['company_name'])) {
+            $settings['company_name'] = $this->limit_text(wp_unslash($_POST['company_name']), 120);
+        }
+        if (isset($_POST['transfer_number'])) {
+            $settings['transfer_number'] = $this->limit_text(wp_unslash($_POST['transfer_number']), 40);
         }
         if (isset($_POST['max_duration_minutes'])) {
             $settings['max_duration_minutes'] = max(1, absint($_POST['max_duration_minutes']));
+        }
+        if (isset($_POST['call_type'])) {
+            $call_type = sanitize_key((string) wp_unslash($_POST['call_type']));
+            $settings['call_type'] = in_array($call_type, ['ai_call', 'ivr_call'], true) ? $call_type : 'ivr_call';
         }
         if (isset($_POST['trigger_on_new_order'])) {
             $settings['trigger_on_new_order'] = 1;
@@ -395,7 +414,7 @@ final class Speaklar_AI_Order_Confirmation
 
     public function register_order_statuses(): void
     {
-        register_post_status('wc-customer-confirmed', [
+        register_post_status('wc-confirmed', [
             'label' => _x('Customer confirmed', 'Order status', 'speaklar-ai-order-confirmation'),
             'public' => true,
             'exclude_from_search' => false,
@@ -415,12 +434,12 @@ final class Speaklar_AI_Order_Confirmation
         foreach ($statuses as $key => $label) {
             $updated[$key] = $label;
             if ($key === 'wc-processing') {
-                $updated['wc-customer-confirmed'] = _x('Customer confirmed', 'Order status', 'speaklar-ai-order-confirmation');
+                $updated['wc-confirmed'] = _x('Customer confirmed', 'Order status', 'speaklar-ai-order-confirmation');
             }
         }
 
         return $updated ?: $statuses + [
-            'wc-customer-confirmed' => _x('Customer confirmed', 'Order status', 'speaklar-ai-order-confirmation'),
+            'wc-confirmed' => _x('Customer confirmed', 'Order status', 'speaklar-ai-order-confirmation'),
         ];
     }
 
@@ -436,7 +455,7 @@ final class Speaklar_AI_Order_Confirmation
             $payload = [];
         }
 
-        $call_id = sanitize_text_field((string) ($payload['call_id'] ?? $payload['conversation_id'] ?? $payload['id'] ?? ''));
+        $call_id = $this->limit_text((string) ($payload['call_id'] ?? $payload['conversation_id'] ?? $payload['id'] ?? ''), 120);
         $order_id = absint($payload['order_id'] ?? $payload['woo_order_id'] ?? $payload['external_order_id'] ?? 0);
         if ($order_id <= 0 && isset($payload['order']) && is_array($payload['order'])) {
             $order_id = absint($payload['order']['id'] ?? 0);
@@ -453,11 +472,11 @@ final class Speaklar_AI_Order_Confirmation
             return new WP_REST_Response(['message' => 'WooCommerce order not found.'], 404);
         }
 
-        $raw_result = (string) ($payload['result'] ?? $payload['intent'] ?? $payload['confirmation_status'] ?? $payload['status'] ?? '');
+        $raw_result = $this->limit_text((string) ($payload['result'] ?? $payload['intent'] ?? $payload['confirmation_status'] ?? $payload['status'] ?? ''), 80);
         $result = $this->normalize_result($raw_result);
         $target_status = $this->status_for_result($result, $settings);
-        $summary = sanitize_textarea_field((string) ($payload['summary'] ?? $payload['message'] ?? ''));
-        $transcript = sanitize_textarea_field((string) ($payload['transcript'] ?? ''));
+        $summary = $this->limit_text((string) ($payload['summary'] ?? $payload['message'] ?? ''), 800);
+        $transcript = sanitize_textarea_field($this->truncate((string) ($payload['transcript'] ?? ''), 1800));
 
         $note_parts = [
             'Speaklar AI call result: ' . ($result ?: 'unknown'),
@@ -614,47 +633,50 @@ final class Speaklar_AI_Order_Confirmation
         foreach ($order->get_items() as $item) {
             $product = method_exists($item, 'get_product') ? $item->get_product() : null;
             $items[] = [
-                'name' => $item->get_name(),
+                'name' => $this->limit_text($item->get_name(), 160),
                 'quantity' => (int) $item->get_quantity(),
                 'subtotal' => (string) $item->get_subtotal(),
                 'total' => (string) $item->get_total(),
-                'sku' => $product && method_exists($product, 'get_sku') ? (string) $product->get_sku() : '',
+                'sku' => $product && method_exists($product, 'get_sku') ? $this->limit_text($product->get_sku(), 80) : '',
             ];
         }
 
         return [
             'source' => 'woocommerce',
-            'event' => $event,
-            'text_to_speech_name' => (string) $settings['text_to_speech_name'],
+            'event' => $this->limit_text($event, 40),
+            'call_type' => $this->limit_text((string) $settings['call_type'], 20),
+            'company_name' => $this->limit_text((string) $settings['company_name'], 120),
+            'transfer_number' => $this->limit_text((string) $settings['transfer_number'], 40),
+            'text_to_speech_name' => $this->limit_text((string) $settings['text_to_speech_name'], 80),
             'max_duration_minutes' => (int) $settings['max_duration_minutes'],
             'store' => [
-                'name' => get_bloginfo('name'),
+                'name' => $this->limit_text((string) $settings['company_name'], 120),
                 'url' => home_url('/'),
-                'timezone' => wp_timezone_string(),
+                'timezone' => $this->limit_text(wp_timezone_string(), 80),
             ],
             'agent' => [
-                'id' => (string) $settings['agent_id'],
-                'name' => (string) $settings['agent_name'],
+                'id' => $this->limit_text((string) $settings['agent_id'], 80),
+                'name' => $this->limit_text((string) $settings['agent_name'], 120),
             ],
             'callback' => [
                 'webhook_url' => $this->webhook_url($settings),
                 'webhook_secret' => (string) $settings['webhook_secret'],
             ],
             'customer' => [
-                'name' => trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()),
-                'phone' => (string) $order->get_billing_phone(),
-                'email' => (string) $order->get_billing_email(),
+                'name' => $this->limit_text(trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()), 120),
+                'phone' => $this->limit_text($order->get_billing_phone(), 40),
+                'email' => $this->limit_text($order->get_billing_email(), 120),
             ],
             'order' => [
                 'id' => (int) $order->get_id(),
-                'number' => (string) $order->get_order_number(),
-                'status' => (string) $order->get_status(),
-                'currency' => (string) $order->get_currency(),
+                'number' => $this->limit_text($order->get_order_number(), 40),
+                'status' => $this->limit_text($order->get_status(), 40),
+                'currency' => $this->limit_text($order->get_currency(), 10),
                 'total' => (string) $order->get_total(),
                 'subtotal' => (string) $order->get_subtotal(),
                 'shipping_total' => (string) $order->get_shipping_total(),
-                'payment_method' => (string) $order->get_payment_method(),
-                'payment_method_title' => (string) $order->get_payment_method_title(),
+                'payment_method' => $this->limit_text($order->get_payment_method(), 80),
+                'payment_method_title' => $this->limit_text($order->get_payment_method_title(), 120),
                 'billing_address' => $this->address_payload($order, 'billing'),
                 'shipping_address' => $this->address_payload($order, 'shipping'),
                 'items' => $items,
@@ -668,15 +690,15 @@ final class Speaklar_AI_Order_Confirmation
         $prefix = $type === 'shipping' ? 'get_shipping_' : 'get_billing_';
 
         return [
-            'first_name' => (string) $order->{$prefix . 'first_name'}(),
-            'last_name' => (string) $order->{$prefix . 'last_name'}(),
-            'company' => (string) $order->{$prefix . 'company'}(),
-            'address_1' => (string) $order->{$prefix . 'address_1'}(),
-            'address_2' => (string) $order->{$prefix . 'address_2'}(),
-            'city' => (string) $order->{$prefix . 'city'}(),
-            'state' => (string) $order->{$prefix . 'state'}(),
-            'postcode' => (string) $order->{$prefix . 'postcode'}(),
-            'country' => (string) $order->{$prefix . 'country'}(),
+            'first_name' => $this->limit_text($order->{$prefix . 'first_name'}(), 80),
+            'last_name' => $this->limit_text($order->{$prefix . 'last_name'}(), 80),
+            'company' => $this->limit_text($order->{$prefix . 'company'}(), 120),
+            'address_1' => $this->limit_text($order->{$prefix . 'address_1'}(), 160),
+            'address_2' => $this->limit_text($order->{$prefix . 'address_2'}(), 160),
+            'city' => $this->limit_text($order->{$prefix . 'city'}(), 80),
+            'state' => $this->limit_text($order->{$prefix . 'state'}(), 80),
+            'postcode' => $this->limit_text($order->{$prefix . 'postcode'}(), 40),
+            'country' => $this->limit_text($order->{$prefix . 'country'}(), 40),
         ];
     }
 
@@ -897,6 +919,9 @@ final class Speaklar_AI_Order_Confirmation
         if ((string) $settings['text_to_speech_name'] === 'default') {
             $settings['text_to_speech_name'] = 'ria';
         }
+        if ((string) $settings['company_name'] === '') {
+            $settings['company_name'] = get_bloginfo('name');
+        }
         if ((string) $settings['webhook_secret'] === '') {
             $settings['webhook_secret'] = wp_generate_password(40, false, false);
             update_option(self::OPTION_KEY, $settings);
@@ -912,6 +937,9 @@ final class Speaklar_AI_Order_Confirmation
             'api_key' => '',
             'agent_id' => '',
             'agent_name' => '',
+            'call_type' => 'ivr_call',
+            'company_name' => get_bloginfo('name'),
+            'transfer_number' => '',
             'text_to_speech_name' => 'ria',
             'max_duration_minutes' => 3,
             'webhook_secret' => wp_generate_password(40, false, false),
@@ -921,7 +949,7 @@ final class Speaklar_AI_Order_Confirmation
             'trigger_on_new_order' => 1,
             'trigger_statuses' => ['pending', 'processing', 'on-hold'],
             'cod_only' => 0,
-            'confirmed_status' => 'processing',
+            'confirmed_status' => 'confirmed',
             'cancelled_status' => 'cancelled',
             'later_status' => 'on-hold',
             'no_answer_status' => 'on-hold',
@@ -1124,6 +1152,15 @@ final class Speaklar_AI_Order_Confirmation
         }
 
         return substr($value, 0, $length);
+    }
+
+    private function limit_text($value, int $length): string
+    {
+        $value = sanitize_text_field(wp_strip_all_tags((string) $value));
+        $value = preg_replace('/\s+/', ' ', $value);
+        $value = trim((string) $value);
+
+        return $this->truncate($value, $length);
     }
 }
 
